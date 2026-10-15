@@ -209,12 +209,33 @@ services:
 udemy 2021: flake8
 2026 10: Ruff > faster, autofix (lits, formats, sort imports)
 docs: https://docs.astral.sh/ruff/installation/
+https://pypi.org/project/ruff/
+https://pypi.org/project/ruff/#user-content-configuration
 linting only installs in local dev container (does not go to prod deployment) > requirements.dev.txt
 1. in local proj root create file: requirements.dev.txt
+2. add build arg to docker compose:
+  - args: - DEV=true
+3. in dockerfile add copy lines, ARG and if lines
+  - COPY ./requirements.dev.txt /tmp/requirements.dev.txt
+  - ARG DEV=false (which is overriden in docker compose local, by default we are not running dev mode)
+  - add if dev=true in RUN commands
+    ```sh  
+    if [ $DEV = "true" ]; \
+        then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
+    fi && \
+    ```
+4. test image builds ok. From local proj root run:
+  bash: docker compose build
+  ZAG: image prev: 09ff2f4b530e 189.9MB
+  ZAG: image after: 1b1364405a86 247MB
+  Validate: docker compose run --rm app sh
+5. Setup exclude folders for Ruff linting
 
 ### requirements.dev.txt file v1 2026 10
-ruff>=0.17,<0.2
+ruff>=0.17.1,<0.20
 
+
+### dockerfile v1.1 
 
 
 ---

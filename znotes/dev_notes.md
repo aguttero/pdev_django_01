@@ -148,6 +148,10 @@ app/*/*/*/__pycache__/
 .env/
 .venv/
 venv/
+
+# Other
+.ruff_cache
+
 ```
 ## 7 Test build image
 1. cd to local project root folder
@@ -157,7 +161,60 @@ venv/
 5. validate versions with docker desktop exec
   - docker image ls -a
   - docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
-  - docker run [image name] "command"
+  - docker run --rm -it [image name] sh  
+  - (--rm remove+volumes at end -i interactive -t allocate TTY sh command)
+  - sh: ptyhon3 --version
+  - sh: pip list
+  - sh: printenv
+  - sh: cat /etc/os-release
+  ZAG: to login as root: (root is Uid 0 > -u 0)
+  - docker run --rm -it -u 0 [image name] sh
+
+
+## 8 Docker compose file v1 2026 10
+1. create compose.yml in project root (docker-compose.yml in older versions)
+Notes:
+* args -DEV=true (for later use)
+* ports: 8000:8000 puerto_host(local_dev):puerto_contenedor
+* runserver 0.0.0.0:8000 > expone el 8000 del server
+* volumes: ./app:/app host_path:container_path binding
+ . dot de './app' = compose.yml folder 
+* command: default command that will be run (can be overriden by docker-compose xxx -c "command")
+
+2. Test it builds ok (same as in docker build but now it does it from docker compose and adds a tag name to image) 
+  - in local project root: bash: docker compose build
+3. To validate run: ('app' = service name in .yml file)  
+  - as default user: sh: docker compose run --rm app sh
+  - as root: sh: docker compose run --rm -u 0 app sh
+  - validate bind in /app dir sh: mkdir tmp
+
+
+### v1 compose.yml
+```yml
+services:
+  app:
+    build:
+      context: .
+      args:
+        - DEV=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+```
+
+## 9 Linting Setup
+udemy 2021: flake8
+2026 10: Ruff > faster, autofix (lits, formats, sort imports)
+docs: https://docs.astral.sh/ruff/installation/
+linting only installs in local dev container (does not go to prod deployment) > requirements.dev.txt
+1. in local proj root create file: requirements.dev.txt
+
+### requirements.dev.txt file v1 2026 10
+ruff>=0.17,<0.2
+
 
 
 ---

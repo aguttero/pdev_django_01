@@ -51,16 +51,16 @@ SQLite 3.37+ (no driver required)
 Queue Backend for production
 
 ## 4 Requirements.txt
-1. Starti with: Django>=6.1,<6.2
+1. Start with: Django>=6.1,<6.2
 2. Go to Dockerfile Creation below
 
-10: final Req.txt:
+### Req.txt v1 2026 10:
 Django>=6.1,<6.2
 djangorestframework>=3.18,<3.2
 psycopg>=3.1.8,<3.2
 
   
-## 5 Dockerfile, .gitignore .dockerignore
+## 5 Dockerfile
 * Dockerfile - ZAG TEST (reco fallback: 3.14-slim)
 choose base image: python:3.14.8-alpine 3.24
 python is the name of the official image on docker hub 
@@ -73,48 +73,99 @@ ENV PYTHONUNBUFFERED=1
 Sets pwd /app > this is where django project will reside
 exposes port 8000 from container to machine
 So we can connect to django web dev server
+ZAG: remember to create app/ in the local project root
 COPY ./requirements.txt /tmp/requirements.txt
 COPY ./app /app
 WORKDIR /app
 EXPOSE 8000
 
 * run commands:
-creates venv and upgrades pip
+creates venv in /py; upgrades pip; installs requirements; deletes /tmp
+best practice to create venv in docker as base python in image might conflict with app dependencies
+adds user django-user to linux with no home folder and no password 
+best practice not to user the root user
 
 RUN python -m venv /py && \
     /py/bin/pip install --upgrade pip && \
+    /py/bin/pip install -r /tmp/requirements.txt && \
+    rm -rf /tmp && \
+    adduser \
+      --disabled-password \
+      --no-create-home \
+      django-user
 
+* env config
+updates the PATH environment variable inside the image
+PATH defines all directories where executables can be run
+this adds /py/bin to the system path
+ENV PATH="/py/bin:$PATH"
 
-### V1 dockerfile:
-FROM python:3.14.8-alpine 3.24
+* user selector
+swithces from root user django-user
+USER django-user
+
+### dockerfile v1 2026 10
+```dockerfile
+FROM python:3.14.8-alpine3.24
 LABEL maintainer="github.com/aguttero"
-
-
-
-### dockerfile 2026 10
-
-
-
-1. create Dockerfile in project root
-
-# run commands
-
-# 2026 10 14 Stack
-Docker Desktop 4.95.0
-
-## requirements.txt
-
-
-
-## Dockerfile
-FROM python:3.9-alpine3.13
-LABEL mantainer="github.com/aguttero"
 
 ENV PYTHONUNBUFFERED=1
 
 COPY ./requirements.txt /tmp/requirements.txt
-COPY ./requirements.dev.txt /tmp/requirements.dev.txt
-COPY ./scripts /scripts
 COPY ./app /app
 WORKDIR /app
 EXPOSE 8000
+
+RUN python -m venv /py && \
+    /py/bin/pip install --upgrade pip && \
+    /py/bin/pip install -r /tmp/requirements.txt && \
+    rm -rf /tmp && \
+    adduser \
+        --disabled-password \
+        --no-create-home \
+        django-user
+
+ENV PATH="/py/bin:$PATH"
+
+USER django-user
+```
+
+## 6 add .dockerignore file
+files we don't want to copy to docker image
+```dockerignore
+# Git
+.git
+.gitignore
+
+# Docker
+.docker
+
+# Python
+app/__pycache__/
+app/*/__pycache__/
+app/*/*/__pycache__/
+app/*/*/*/__pycache__/
+.env/
+.venv/
+venv/
+```
+## 7 Test build image
+1. cd to local project root folder
+2. mkdir app (or the name of the app folder in the RUN section of dockerfile)
+3. sh: docker build .
+4. validate log ok. It creates image name 'none'
+5. validate versions with docker desktop exec
+  - docker image ls -a
+  - docker run [OPTIONS] IMAGE [COMMAND] [ARG...]
+  - docker run [image name] "command"
+
+
+---
+# run commands
+
+# 2026 10 14 Stack
+mbpro:
+Prev: Docker Desktop 4.89
+Current: Docker Desktop 4.95.0
+
+## requirements.txt

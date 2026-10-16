@@ -228,8 +228,7 @@ linting only installs in local dev container (does not go to prod deployment) > 
   bash: docker compose build
   ZAG: image prev: 09ff2f4b530e 189.9MB
   ZAG: image after: 1b1364405a86 247MB
-  Validate: docker compose run --rm app sh
-  ZAG: test ruff: 
+  Validate: bash: docker compose run --rm app sh
     - sh: ruff check [path]
   
 5. Setup exclude folders for Ruff linting
@@ -244,6 +243,11 @@ linting only installs in local dev container (does not go to prod deployment) > 
         "settings.py",
         ]
   ```
+6. Test run in container:
+  - bash: docker compose run --rm app sh -c "ruff check" (this opens container runs shows report and exit) > All Checks passed!
+  - bash: docker compose run --rm app sh
+    - sh: ruff check [path] (this allows you to stay in the container shell until you type exit)
+
 
 ### how to run ruff:
 1. open container shell

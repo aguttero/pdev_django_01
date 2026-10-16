@@ -215,7 +215,7 @@ linting only installs in local dev container (does not go to prod deployment) > 
 1. in local proj root create file: requirements.dev.txt
 2. add build arg to docker compose:
   - args: - DEV=true
-3. in dockerfile add copy lines, ARG and if lines
+3. in dockerfile add copy lines, ARG and IF lines
   - COPY ./requirements.dev.txt /tmp/requirements.dev.txt
   - ARG DEV=false (which is overriden in docker compose local, by default we are not running dev mode)
   - add if dev=true in RUN commands
@@ -229,15 +229,104 @@ linting only installs in local dev container (does not go to prod deployment) > 
   ZAG: image prev: 09ff2f4b530e 189.9MB
   ZAG: image after: 1b1364405a86 247MB
   Validate: docker compose run --rm app sh
+  ZAG: test ruff: 
+    - sh: ruff check [path]
+  
 5. Setup exclude folders for Ruff linting
+  - Ruff config file (rules and excluded files)
+  - create file:  local_project_root/app/ruff.toml
+  - add django folders and files to exclude
+  ```toml
+    extend-exclude = [
+        "migrations",
+        "__pycache__",
+        "manage.py",
+        "settings.py",
+        ]
+  ```
+
+### how to run ruff:
+1. open container shell
+bash: docker compose run --rm app sh
+2. to check > sh: ruff check [path]
+3. to fix > sh: ruff check --fix
+4. to format > ruff format
+
+
+### how to setup exclusions in ruff.toml file
+if you want to keep Ruff's built-in defaults (which automatically handle .git, .venv, __pycache__, etc.) but add extra rules, always use extend-exclude instead. This prevents your custom list from accidentally wiping out Ruff's smart defaults:
+```toml
+# ruff.toml
+
+# Merges your custom paths with Ruff's default ignore list
+extend-exclude = [
+    "custom_compiled_folder/", (or "custom_compiled_folder")
+    "build/", (or "build")
+]
+```
+
+#### option 1 complete exclude
+* To avoid Ruff to touch, check, or format your files at all, add the wildcard pattern to the global exclude array at the top level of your ruff.toml:
+```toml
+# ruff.toml
+exclude = [
+    "**/migrations/*.py", ZAG: this notation excludes files individually
+]
+```
+* If you run Ruff via pre-commit hooks, pre-commit explicitly overrides default exclude rules by passing file names directly. To force Ruff to respect your exclusions during pre-commit, you must also add force-exclude = true:
+```toml
+# ruff.toml
+exclude = [
+    "**/migrations/*.py",
+]
+force-exclude = true
+```
+#### option 2 - Ignore Linting, keep formatting
+* Often, developers prefer to let Ruff format the files (ruff format) to keep whitespace clean, but want to ignore lint rules (ruff check) so that auto-generated code doesn't throw error
+To bypass all linter warnings for folder 'migrations', use per-file-ignores inside the [lint] block
+```toml
+# ruff.toml
+
+[lint]
+# Ignore ALL rules ("ALL") for any file inside a migrations folder
+per-file-ignores = { "**/migrations/*.py" = ["ALL"] }
+```
+
 
 ### requirements.dev.txt file v1 2026 10
 ruff>=0.17.1,<0.20
 
 
 ### dockerfile v1.1 
+```ts
+FROM python:3.14.8-alpine3.24
+LABEL maintainer="github.com/aguttero"
 
+ENV PYTHONUNBUFFERED=1
 
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./requirements.dev.txt /tmp/requirements.dev.txt
+COPY ./app /app
+WORKDIR /app
+EXPOSE 8000
+
+ARG DEV=false
+RUN python -m venv /py && \
+    /py/bin/pip install --upgrade pip && \
+    /py/bin/pip install -r /tmp/requirements.txt && \
+    if [ $DEV = "true" ]; \
+        then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
+    fi && \
+    rm -rf /tmp && \
+    adduser \
+        --disabled-password \
+        --no-create-home \
+        django-user
+
+ENV PATH="/py/bin:$PATH"
+
+USER django-user
+```
 ---
 # run commands
 

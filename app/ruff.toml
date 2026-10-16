@@ -1,0 +1,15 @@
+# Set maximum line length to 88
+line-length = 88
+target-version = "py314"
+
+extend-exclude = [
+    "migrations",
+    "__pycache__",
+    "manage.py",
+    "settings.py",
+]
+
+[lint]
+# Ignore ALL rules ("ALL") for any file inside a migrations folder
+# ZAG: so you can run ruff format anyway and ignore lint check
+per-file-ignores = { "calculated.py" = ["ALL"] }

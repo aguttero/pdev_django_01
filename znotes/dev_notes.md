@@ -236,7 +236,7 @@ linting only installs in local dev container (does not go to prod deployment) > 
   - Ruff config file (rules and excluded files)
   - create file:  local_project_root/app/ruff.toml
   - add django folders and files to exclude
-  ```toml
+  ```python
     extend-exclude = [
         "migrations",
         "__pycache__",
@@ -255,7 +255,7 @@ bash: docker compose run --rm app sh
 
 ### how to setup exclusions in ruff.toml file
 if you want to keep Ruff's built-in defaults (which automatically handle .git, .venv, __pycache__, etc.) but add extra rules, always use extend-exclude instead. This prevents your custom list from accidentally wiping out Ruff's smart defaults:
-```toml
+```python
 # ruff.toml
 
 # Merges your custom paths with Ruff's default ignore list
@@ -267,14 +267,14 @@ extend-exclude = [
 
 #### option 1 complete exclude
 * To avoid Ruff to touch, check, or format your files at all, add the wildcard pattern to the global exclude array at the top level of your ruff.toml:
-```toml
+```python
 # ruff.toml
 exclude = [
     "**/migrations/*.py", ZAG: this notation excludes files individually
 ]
 ```
 * If you run Ruff via pre-commit hooks, pre-commit explicitly overrides default exclude rules by passing file names directly. To force Ruff to respect your exclusions during pre-commit, you must also add force-exclude = true:
-```toml
+```python
 # ruff.toml
 exclude = [
     "**/migrations/*.py",
@@ -284,7 +284,7 @@ force-exclude = true
 #### option 2 - Ignore Linting, keep formatting
 * Often, developers prefer to let Ruff format the files (ruff format) to keep whitespace clean, but want to ignore lint rules (ruff check) so that auto-generated code doesn't throw error
 To bypass all linter warnings for folder 'migrations', use per-file-ignores inside the [lint] block
-```toml
+```python
 # ruff.toml
 
 [lint]
@@ -327,6 +327,8 @@ ENV PATH="/py/bin:$PATH"
 
 USER django-user
 ```
+
+## 10 Next ITEM
 ---
 # run commands
 

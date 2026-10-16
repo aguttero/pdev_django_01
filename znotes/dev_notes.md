@@ -295,7 +295,7 @@ To bypass all linter warnings for folder 'migrations', use per-file-ignores insi
 # Ignore ALL rules ("ALL") for any file inside a migrations folder
 per-file-ignores = { "**/migrations/*.py" = ["ALL"] }
 ```
-
+ZAG PENDING: find out how to ignore multiple individual files and how to specify this in the toml file
 
 ### requirements.dev.txt file v1 2026 10
 ruff>=0.17.1,<0.20
@@ -332,7 +332,28 @@ ENV PATH="/py/bin:$PATH"
 USER django-user
 ```
 
-## 10 Next ITEM
+## 10 Create Django Project inside Docker
+1. in local sh: docker compose run --rm app sh -c "django-admin startproject app ." (app is the django proj name)
+   ZAG: named 'dapp' wiht this command: sh: docker compose run --rm app sh -c "django-admin startproject dshbrd ."
+2. test django dev server in localhost:8000
+   local sh: docker compose up (this runs command line in compose.yml > sh -c "python manage.py runserver 0.0.0.0:8000")
+   sh: docker compose down to end or ctrl+c
+
+## 11 GitHub actions configuration
+
+### naming best practice for django app
+Name your Django project directory after the actual name of your application (e.g., myproject, ecom_backend, portfolio), while keeping the Docker root directory generic if you want.
+For example, if your product is called "Nimbus", run this instead:
+sh:  docker compose run --rm app sh -c "django-admin startproject nimbus ."
+
+Resulting structure:
+app/                 <-- Docker working directory
+├── manage.py
+└── nimbus/          <-- Clear Django project configuration folder
+    ├── settings.py
+    └── urls.py
+
+
 ---
 # run commands
 

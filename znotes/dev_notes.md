@@ -340,6 +340,12 @@ USER django-user
    sh: docker compose down to end or ctrl+c
 
 ## 11 GitHub actions configuration
+1. Action file > in proj root > create file: .github/workflows/checks.yml (can be [any_file_name.yml])
+  - This file automates:
+    - Code Linting
+    - Unit Testing
+2. Set Docker Hub Authentication
+
 
 ### naming best practice for django app
 Name your Django project directory after the actual name of your application (e.g., myproject, ecom_backend, portfolio), while keeping the Docker root directory generic if you want.

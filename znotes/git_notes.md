@@ -59,8 +59,10 @@ Once the rebase is finished, your local repository will be completely in sync wi
 Warning: You might see online advice telling you to use git push -f or git push --force. Avoid doing this unless you are completely sure, because force-pushing will completely erase and overwrite whatever your teammate pushed to the remote server.
 
 ## Delete unwanted tracked files (remove from cache)
-  sh: git rm -r --cached **/[file or folder name][/]
+This stops uploading files to github but does not delete the already existing files in github
 
+  sh: git rm -r --cached **/[file or folder name][/]
+  
 ## unstage files
   1. via panel in code editor
   2. sh: git restore --staged [file or folder]

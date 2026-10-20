@@ -12,4 +12,4 @@ extend-exclude = [
 [lint]
 # Ignore ALL rules ("ALL") for any file inside a migrations folder
 # ZAG: so you can run ruff format anyway and ignore lint check
-per-file-ignores = { "calculate.py" = ["ALL"] }
+# per-file-ignores = { "calculate.py" = ["ALL"] }

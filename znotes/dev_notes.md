@@ -366,7 +366,10 @@ USER django-user
         - name: Lint
           run:[v2] docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
         - name: Lint
-          run: docker compose run --rm app sh -c "ruff check"
+          run: docker compose run --rm app sh -c "ruff check --cache-dir /tmp/ruff_cache" (ZAG added --cache-dir to avoid permissions os error 13)
+        
+
+        
   - PUSH to GITHUB in order to create the action
 2. Set Docker Hub Authentication (to have higher rate limits 200pulls/6h) per ip address > done in ## 2
 3. Crate Secrets in GitHub Project wiht docker hub credentials > done in ## 2

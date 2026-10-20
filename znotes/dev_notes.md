@@ -342,10 +342,35 @@ USER django-user
 ## 11 GitHub actions configuration
 1. Action file > in proj root > create file: .github/workflows/checks.yml (can be [any_file_name.yml])
   - This file automates:
+    - Triggers
     - Code Linting
     - Unit Testing
-2. Set Docker Hub Authentication
-
+  - Add three --- at beginning of file (this means is .yml file)
+  - on: section > This is the trigger
+    - on: [push] > this triggers on every push
+    - on: 
+        workflow_dispatch: > this allows to manually trigger from GitHub 
+    - runs-on [ZAG 2026 10]:ubuntu-24.04 (check for less expensive linux runner if running on Github paid, this runner already has docker and docker-compose installed) [ZAG NOTE: user Docker Buildx setp for more complex and faster action automation. order: 1.login 2.Buildx. 3 run actions]
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+    
+    - steps:
+        - name: Login to Docker Hub
+          uses: docker/login-action@v4 [ZAG 2026 10]
+          with: 
+            username, password > secret token
+        - name: Checkout code [there might be steps that don't require checkout]
+          uses: actions/checkout@v4
+        - name: Test
+          run:[v1] docker compose run --rm app sh -c "python manage.py test"
+        - name: Lint
+          run:[v2] docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
+        - name: Lint
+          run: docker compose run --rm app sh -c "ruff check"
+    
+2. Set Docker Hub Authentication (to have higher rate limits 200pulls/6h) per ip address
+3. Crate Secrets in GitHub Project wiht docker hub credentials
+3. Create triggers
 
 ### naming best practice for django app
 Name your Django project directory after the actual name of your application (e.g., myproject, ecom_backend, portfolio), while keeping the Docker root directory generic if you want.

@@ -366,9 +366,9 @@ USER django-user
         - name: Lint
           run:[v2] docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
         - name: Ruff Linter
-          ZAG: # Force the container process to match the runner's user permission
+          ZAG: THIS TESTED OK > # Force the container process to match the runner's user permission
           run: docker compose run --rm --user "$(id -u):$(id -g)" app sh -c "ruff check"
-          ZAG: Tested the below option and did not work
+          ZAG: Test did not work
           run: docker compose run --rm app sh -c "ruff check --cache-dir /tmp/ruff_cache" (ZAG added --cache-dir to avoid permissions os error 13)
         
 

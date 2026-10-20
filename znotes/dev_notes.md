@@ -367,10 +367,15 @@ USER django-user
           run:[v2] docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
         - name: Lint
           run: docker compose run --rm app sh -c "ruff check"
-    
-2. Set Docker Hub Authentication (to have higher rate limits 200pulls/6h) per ip address
-3. Crate Secrets in GitHub Project wiht docker hub credentials
-3. Create triggers
+  - PUSH to GITHUB in order to create the action
+2. Set Docker Hub Authentication (to have higher rate limits 200pulls/6h) per ip address > done in ## 2
+3. Crate Secrets in GitHub Project wiht docker hub credentials > done in ## 2
+
+3. Validate actions in GitHub
+  - After commit and push the checks.yml file
+  - Go to Gihub repo > actions
+    - if trigger: push should be running
+    - if trigger manual: trigger to test.
 
 ### naming best practice for django app
 Name your Django project directory after the actual name of your application (e.g., myproject, ecom_backend, portfolio), while keeping the Docker root directory generic if you want.

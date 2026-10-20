@@ -23,4 +23,6 @@ jobs:
       # - name: Test
       #   run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
       - name: Run Ruff Linter
-        run: docker compose run --rm app sh -c "ruff check --cache-dir /tmp/ruff_cache"
+        # v1 run: docker compose run --rm app sh -c "ruff check --cache-dir /tmp/ruff_cache"
+        # v2 Force the container process to match the runner's user permission
+        run: docker compose run --rm --user "$(id -u):$(id -g)" app sh -c "ruff check"

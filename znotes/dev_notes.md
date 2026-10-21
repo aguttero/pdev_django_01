@@ -551,6 +551,8 @@ psycopg[c]>=3.3.6,<3.4
 - sh: docker compose down (in case a container is running)
 - sh: docker compose build (check for errors)
 - sh: docker compose run --rm app sh (pip list > psycopg-c)
+- docker desktop > exec in db-1 sh: pg_isready
+- sh: docker compose up > docker ps > docker exec -it [container_name_or_id] sh > pg_isready
 
 ### 6. configure django (engine, hostname, port, db name, username, pwd)
 * settings.py
@@ -565,8 +567,16 @@ psycopg[c]>=3.3.6,<3.4
   - remove db.sqlite3 file from app/ folder and git tracking
 
 ### 7. Fix DB race condition
-- Docker compose healtcheck test
-
+- Create Django custom command 'wait for db'
+1. Create django app 'core'
+  - docker compose run --rm app sh -c "python manage.py startapp core"
+  - clean files : tests.py, create tests/ add tests/__init__.py
+  - add 'core' to installed apps in settings.py
+  - create core/management/commands/wait_for_db.py (and __init__.py in all folders)
+  - create test for wait_for_db in core/tests/test_commands.py
+  - test with: docker compose run --rm app sh -c"python manage.py test"
+  
+  
 
 ---
 # run commands

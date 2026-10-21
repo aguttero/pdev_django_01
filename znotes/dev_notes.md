@@ -339,6 +339,18 @@ USER django-user
    local sh: docker compose up (this runs command line in compose.yml > sh -c "python manage.py runserver 0.0.0.0:8000")
    sh: docker compose down to end or ctrl+c
 
+### naming best practice for django app
+Name your Django project directory after the actual name of your application (e.g., myproject, ecom_backend, portfolio), while keeping the Docker root directory generic if you want.
+For example, if your product is called "Nimbus", run this instead:
+sh:  docker compose run --rm app sh -c "django-admin startproject nimbus ."
+
+Resulting structure:
+app/                 <-- Docker working directory
+├── manage.py
+└── nimbus/          <-- Clear Django project configuration folder
+    ├── settings.py
+    └── urls.py
+
 ## 11 GitHub actions configuration
 1. Action file > in proj root > create file: .github/workflows/checks.yml (can be [any_file_name.yml])
   - This file automates:
@@ -383,17 +395,90 @@ USER django-user
     - if trigger: push should be running
     - if trigger manual: trigger to test.
 
-### naming best practice for django app
-Name your Django project directory after the actual name of your application (e.g., myproject, ecom_backend, portfolio), while keeping the Docker root directory generic if you want.
-For example, if your product is called "Nimbus", run this instead:
-sh:  docker compose run --rm app sh -c "django-admin startproject nimbus ."
+## 12 TDD Test Driven Dev
+1. create tests/ folder, add __init__.py file
+2. Or create file tests.py in main app folder
+3. test modules start with 'test_'*.py
+4. setup test DB (django creates it automatically)
+  - django clears DB after each individual test (can be overriden for test data sets)
+5. Django test clases:
+  - SimpleTestCase (no DB integration)
+  - TestCase (DB integration) 
+  - To setup a test import TestClass + Code module to Test
+  ```python
+from django.test import SimpleTestCase
+from django.test import TestCase
+from subapp import views (where code to test resides)
+```
 
-Resulting structure:
-app/                 <-- Docker working directory
-├── manage.py
-└── nimbus/          <-- Clear Django project configuration folder
-    ├── settings.py
-    └── urls.py
+### Test for health-check api
+
+## 13 Configure DB
+1. configure docker-compose.yml
+2. Validate: 
+  - sh: docker compose up > should see db and app services in console log
+  - sh: docker compose ps > check status 
+  - sh: docker inspect pdev_django_01-db-1
+  - sh: docker inspect pdev_django_01-db-1 --format='{{json .State}}'
+  - sh: docker inspect pdev_django_01-db-1 --type "container"
+
+### compose.yml v2
+```yml
+services:
+  app:
+    build:
+      context: .
+      args:
+        - DEV=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py runserver 0.0.0.0:8000"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=devdb
+      - DB_USER=devuser
+      - DB_PASS=changeme
+    depends_on:
+     - db
+
+  db:
+    image: postgres:18-alpine3.24
+    volumes:
+      - dev-db-data:/var/lib/postgresql
+    environment:
+      - POSTGRES_DB=devdb
+      - POSTGRES_USER=devuser
+      - POSTGRES_PASSWORD=changeme
+
+    # healthcheck:
+    #  test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+    #  interval: 5s
+    #  timeout: 5s
+    #  retries: 5s
+
+volumes:
+  dev-db-data:
+```
+
+
+### PostgreSQL + Docker Compose - Arquitecture features
+- DB config defined un project code (re-usable for other devs and prod env)
+- Persistent data in docker volumes
+- Handles Network config
+- Handles env variable configuration
+
+#### Postgres 18 Database Cluster path
+https://www.postgresql.org/docs/18/creating-cluster.html
+
+#### Services in docker compose 
+app: depends_on: - db
+db: 
+  image: postgres:18-alpine3.24
+  volume: dev-db-data:/var/lib/postgresql [ZAG 2026 - docker hub docs]
+
 
 
 ---
@@ -405,3 +490,9 @@ Prev: Docker Desktop 4.89
 Current: Docker Desktop 4.95.0
 
 ## requirements.txt
+
+## build req notes Gemini 2026
+
+Critical Alpine Note for Django
+
+Because you are explicitly using an Alpine-based Python image (alpine3.24), building Python packages like psycopg (the database adapter Django uses) requires compiled C binaries. In your Dockerfile, make sure you install musl-dev, gcc, and postgresql-dev packages before running your pip install loop to prevent build failures.

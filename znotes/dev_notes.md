@@ -413,16 +413,24 @@ from subapp import views (where code to test resides)
 
 ### Test for health-check api
 
-## 13 Configure DB
-1. configure docker-compose.yml
-2. Validate: 
-  - sh: docker compose up > should see db and app services in console log
-  - sh: docker compose ps > check status 
-  - sh: docker inspect pdev_django_01-db-1
-  - sh: docker inspect pdev_django_01-db-1 --format='{{json .State}}'
-  - sh: docker inspect pdev_django_01-db-1 --type "container"
+## 13 Configure DB - Postgres
+### PostgreSQL + Docker Compose - Arquitecture features
+- DB config defined un project code (re-usable for other devs and prod env)
+- Persistent data in docker volumes
+- Handles Network config
+- Handles env variable configuration
 
-### compose.yml v2
+#### Postgres 18 Database Cluster path
+https://www.postgresql.org/docs/18/creating-cluster.html
+
+#### Services in docker compose 
+app: depends_on: - db
+db: 
+  image: postgres:18-alpine3.24
+  volume: dev-db-data:/var/lib/postgresql [ZAG 2026 - docker hub docs]
+
+### 1. configure docker-compose.yml
+#### compose.yml dev v2
 ```yml
 services:
   app:
@@ -462,23 +470,102 @@ services:
 volumes:
   dev-db-data:
 ```
+### 2. Validate: 
+  - sh: docker compose up > should see db and app services in console log
+  - sh: docker compose ps > check status 
+  - sh: docker inspect pdev_django_01-db-1
+  - sh: docker inspect pdev_django_01-db-1 --format='{{json .State}}'
+  - sh: docker inspect pdev_django_01-db-1 --type "container"
 
+### 3. Install db adaptor dependencies
+### psycopg documentation
+https://pypi.org/project/psycopg/ v 3.3.6 [2026 10]
+https://www.psycopg.org/psycopg3/docs/basic/install.html#
 
-### PostgreSQL + Docker Compose - Arquitecture features
-- DB config defined un project code (re-usable for other devs and prod env)
-- Persistent data in docker volumes
-- Handles Network config
-- Handles env variable configuration
+#### 1 dockerfile v2
+FROM python:3.14.8-alpine3.24
+LABEL maintainer="github.com/aguttero"
 
-#### Postgres 18 Database Cluster path
-https://www.postgresql.org/docs/18/creating-cluster.html
+ENV PYTHONUNBUFFERED=1
 
-#### Services in docker compose 
-app: depends_on: - db
-db: 
-  image: postgres:18-alpine3.24
-  volume: dev-db-data:/var/lib/postgresql [ZAG 2026 - docker hub docs]
+COPY ./requirements.txt /tmp/requirements.txt
+COPY ./requirements.dev.txt /tmp/requirements.dev.txt
+COPY ./app /app
+WORKDIR /app
+EXPOSE 8000
 
+ARG DEV=false
+RUN python -m venv /py && \
+    /py/bin/pip install --upgrade pip && \
+    apk add --update --no-cache postgresql-client && \
+    apk add --update --no-cache --virtual .tmp-build-deps \
+        gcc musl-dev postgresql-dev && \
+    /py/bin/pip install -r /tmp/requirements.txt && \
+    if [ $DEV = "true" ]; \
+        then /py/bin/pip install -r /tmp/requirements.dev.txt ; \
+    fi && \
+    rm -rf /tmp && \
+    apk del .tmp-build-deps && \
+    adduser \
+        --disabled-password \
+        --no-create-home \
+        django-user
+
+ENV PATH="/py/bin:$PATH"
+
+USER django-user
+
+#### djagngo db dev env config
+* psycopg compiles from source os, so requires dependencies in docker linux before installing with pip install
+* psyscopg[binary] > good for dev (precompiled) avoid for production
+* psycopg[c] > Builds C extensions from source, requires libpq + build tools
+  - Requisites:
+    - C Compiler
+    - python3-dev (python dev headers)
+    - libpq-dev (PostgreSQL client dev headers)
+    - pg_config program available in PATH
+  - pip install > sh: pip install "psycopg[c]"
+* to add packages in alpine need to use alpine package manager 'apk'
+  - gcc (GNU Compiler Collection) = C Compiler
+  - musl-dev (Standard C Library Headers) replaces: glibc (core C library)
+  - postgresql-dev (postgres Client dev files) provides libpq header files anad libraries. (internal C functions for raw networks sockets, parse queries and receive data streams from PSQL DB server)
+ * Best practice: add these packages to build and then delete them
+  
+##### Psycopg compiling notes (gemini)
+Because you are explicitly using an Alpine-based Python image (alpine3.24), building Python packages like psycopg (the database adapter Django uses) requires compiled C binaries. In your Dockerfile, make sure you install musl-dev, gcc, and postgresql-dev packages before running your pip install loop to prevent build failures.
+
+##### from udemy for psycopg2 (older)
+  - alpine equivalents:
+  - postgresql-client (command line tools psql (sql shell), pg_dump, pg_restore and others)(allows manually run SQL queries and backup/restorecommands from terminal and wait-for-postgres script before python manage.py runserver or migrate execution)
+  - build-base (gemini says it is not needed)
+  - postgresql-dev
+  - musl-dev
+
+### 4. Update python reqs.txt 
+[2026 10] add psycopg[c]>=3.3.6,<3.4
+#### requirements.txt:
+Django>=6.1,<6.2
+psycopg[c]>=3.3.6,<3.4
+
+### 5 build and test
+- sh: docker compose down (in case a container is running)
+- sh: docker compose build (check for errors)
+- sh: docker compose run --rm app sh (pip list > psycopg-c)
+
+### 6. configure django (engine, hostname, port, db name, username, pwd)
+* settings.py
+1.DATABASES: Remove sqlite3, add postgres, add env var, add import os
+  - add import os
+  - add 'ENGINE': 'django.db.backends.postgresql',
+        'HOST': os.environ.get('DB_HOST'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASS'),
+  - the env var names need to be exact match those in docker compose file
+  - remove db.sqlite3 file from app/ folder and git tracking
+
+### 7. Fix DB race condition
+- Docker compose healtcheck test
 
 
 ---
@@ -490,9 +577,3 @@ Prev: Docker Desktop 4.89
 Current: Docker Desktop 4.95.0
 
 ## requirements.txt
-
-## build req notes Gemini 2026
-
-Critical Alpine Note for Django
-
-Because you are explicitly using an Alpine-based Python image (alpine3.24), building Python packages like psycopg (the database adapter Django uses) requires compiled C binaries. In your Dockerfile, make sure you install musl-dev, gcc, and postgresql-dev packages before running your pip install loop to prevent build failures.

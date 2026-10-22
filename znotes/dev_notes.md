@@ -153,6 +153,11 @@ venv/
 .ruff_cache
 
 ```
+## 6.5 add .venv and ruff to lint check locally
+1. sh: python3 -m venv .venv
+2. sh: pip install --upgrade pip
+3. sh: pop install ruff
+
 ## 7 Test build image
 1. cd to local project root folder
 2. mkdir app (or the name of the app folder in the RUN section of dockerfile)
@@ -256,6 +261,7 @@ bash: docker compose run --rm app sh
 3. to fix > sh: ruff check --fix
 4. to format > ruff format
 
+### simple exclusions add #noqa
 
 ### how to setup exclusions in ruff.toml file
 if you want to keep Ruff's built-in defaults (which automatically handle .git, .venv, __pycache__, etc.) but add extra rules, always use extend-exclude instead. This prevents your custom list from accidentally wiping out Ruff's smart defaults:
@@ -575,8 +581,32 @@ psycopg[c]>=3.3.6,<3.4
   - create core/management/commands/wait_for_db.py (and __init__.py in all folders)
   - create test for wait_for_db in core/tests/test_commands.py
   - test with: docker compose run --rm app sh -c"python manage.py test"
+2. Add wait_for_db to:
+  - .github/workflows/checks.yml (see #8.2)
+  - compose.yml > commands (see #8.1)
   
-  
+## 8. Set up Database Migrations  
+* command to prepare migrations: (after data model modification)
+  - sh: python manage.py makemigrations 
+
+* command to execute migrations:
+  - sh: python manage.py migrate
+  - best practice: automate run migrate command after wait for db every time you start django
+
+### 1 Edit compose.yml > COMMAND
+add wait for db and migrate commands
+```.yml
+command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+```
+### 2 Edit .github/workflows/checks.yml
+```.yml
+      - name: Test
+        run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
+```
+
 
 ---
 # run commands

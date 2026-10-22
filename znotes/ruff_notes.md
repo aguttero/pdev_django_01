@@ -1,4 +1,6 @@
-# GEMINI RECO CONFIG FOR RUFF DJANGO 6 Python 3.14
+## simple exclusions add #noqa
+
+## GEMINI RECO CONFIG FOR RUFF DJANGO 6 Python 3.14
 For a cutting-edge stack utilizing Django 6 (6.0/6.1), Python 3.14, PostgreSQL 18, HTMX, and Tailwind CSS, your Ruff linting rules should be configured to enforce strict logic safety, take advantage of modern Python 3.14 idioms, protect Postgres/Gunicorn boundaries, and stay completely out of the way of your frontend pipeline (HTML/CSS). [1] (https://www.python.org/downloads/), [2] (https://endoflife.date/django), [3] (https://www.djangoproject.com/weblog/2026/aug/05/django-61-released/)
 Here is the ideal production-ready pyproject.toml configuration containing the exact rule selections and overrides you should enforce:
 ```python

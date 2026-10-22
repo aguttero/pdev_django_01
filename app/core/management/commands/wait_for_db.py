@@ -9,6 +9,7 @@ from django.db.utils import OperationalError  # django error > DB is not ready
 from psycopg import (
     OperationalError as PsycopgOpError,
 )
+
 # Psycopg error when DB is not ready.
 # Renamed to OpError avoid name confusion with the django error
 

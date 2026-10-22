@@ -592,6 +592,63 @@ psycopg[c]>=3.3.6,<3.4
   - The DB starts and Stops and Restars when setting up for first time
 * Run docker compose down and docker compose up again. This should fix the issue
 
+##### FIX wait for actual ORM connection
+¿Qué cambió y por qué soluciona el problema?
+
+1. from django.db import connections: En lugar de usar self.check(), que evalúa configuraciones a nivel de la app de Django, traemos las conexiones internas del ORM.
+2. db_conn.ensure_connection(): Este método le dice a Django: "Abre el socket e intenta comunicarte con el motor de base de datos". Si Postgres está en la fase de "apagado y reinicio" de su primer arranque, la conexión física fallará legítimamente y lanzará una excepción. El bucle while capturará el error, esperará un segundo más y volverá a intentarlo hasta que el reinicio definitivo de Postgres concluya por completo.
+
+##### FIX CODE
+```python
+"""
+Django command to wait for the database to be available.
+"""
+
+import time
+
+from django.core.management.base import BaseCommand
+from django.db import connections  # <--- Importación clave para probar la conexión real
+from django.db.utils import OperationalError
+from psycopg import OperationalError as PsycopgOpError
+
+
+class Command(BaseCommand):
+    """Django command to wait for database."""
+
+    def handle(self, *args, **options):
+        """Entrypoint for command."""
+        self.stdout.write("Waiting for database...")
+        db_up = False
+
+        while db_up is False:
+            try:
+                # 1. Obtenemos el wrapper de la base de datos por defecto
+                db_conn = connections["default"]
+
+                # 2. Forzamos a Django a abrir una conexión física real y ejecutar un comando ping
+                db_conn.ensure_connection()
+
+                # Si llega aquí, la conexión es robusta y real
+                db_up = True
+            except (PsycopgOpError, OperationalError):
+                self.stdout.write("Database unavailable, waiting 1 second...")
+                time.sleep(1)
+
+        self.stdout.write(self.style.SUCCESS("Database available!"))
+```
+##### FIX TEST CODE
+
+Qué cambió exactamente en el test?
+
+1. La ruta del @patch principal:
+	• Antes: "core.management.commands.wait_for_db.Command.check"
+	• Ahora: "django.db.backends.base.base.BaseDatabaseWrapper.ensure_connection"
+	• Por qué: Como cambiamos el código de la aplicación para usar el manejador de conexiones internas de Django, ahora interceptamos directamente la raíz de donde Django levanta los sockets hacia Postgres.
+2. assert_called_once() en lugar de assert_called_once_with(...):
+	• El método ensure_connection() no recibe el parámetro databases=["default"] (eso se decide antes, al elegir el diccionario en connections["default"]). Por ende, simplemente comprobamos que el método se haya ejecutado (assert_called_once()).
+3. El comportamiento de side_effect:
+	• Sigue funcionando exactamente igual de genial. Simula tus 2 caídas de puerto, tus 3 errores de inicialización de Postgres, y el éxito final al sexto intento, asegurando que tu lógica de reintentos sea a prueba de balas contra ese reinicio fantasma del contenedor.
+
 ## 8. Set up Database Migrations  
 * command to prepare migrations: (after data model modification)
   - sh: python manage.py makemigrations 
@@ -647,11 +704,28 @@ Hashing password method?
 - in class UserManager override:
     def create_user
     def create_superuser
+    note: create_user(password=None) is the default django behaviour (For use case where you need a passwordless user that can't login to the console)
 * settings.py > 
-  - add at end: 
+  - add at bottom of file: 
     AUTH_USER_MODEL = 'your_app_name.User'
+    AUTH_USER_MODEL = 'core.User'
 
-
+### 3 make migrations
+1. Make migrations
+sh: docker compose run --rm app sh -c "python manage.py makemigrations"
+validate: core/migrations/0001_initial.py
+2. Migrate
+sh: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py migrate"
+error: inconsistent migration history  > This happens if data model previuosly initialized 
+To fix:
+  > manually delete the dev-db-data volume
+  > alt 1: docker desktop
+  > alt 2: docker volume ls > look for db volume name [proj_name_dev-db-data]
+    sh: docker volume rm [volume_name]
+    id volume in use > sh: docker compose down and retry volume rm
+  > run again: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py migrate" > if fails, is because of the temporary postgres server for the very first time, run again and it works.
+3. ZAG: Going back to (## 13.7)FIX DB RACE CONDITION to fix the code.
+  - instead of waiting for a self.check = ok will wait for an ORM OK
 
 ---
 # run commands

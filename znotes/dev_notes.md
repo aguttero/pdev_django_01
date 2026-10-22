@@ -261,7 +261,9 @@ bash: docker compose run --rm app sh
 3. to fix > sh: ruff check --fix
 4. to format > ruff format
 
-### simple exclusions add #noqa
+### simple error fix
+- templfate files exclusions, line level **add #noqa**
+- trailing white spacees: configure editor to **Remove trailing whitespace on save**
 
 ### how to setup exclusions in ruff.toml file
 if you want to keep Ruff's built-in defaults (which automatically handle .git, .venv, __pycache__, etc.) but add extra rules, always use extend-exclude instead. This prevents your custom list from accidentally wiping out Ruff's smart defaults:
@@ -584,7 +586,12 @@ psycopg[c]>=3.3.6,<3.4
 2. Add wait_for_db to:
   - .github/workflows/checks.yml (see #8.2)
   - compose.yml > commands (see #8.1)
-  
+
+#### ZAG. WARNING - APP error during first DB startup
+*  The docker app will fail the first time that Postgres needs to create the DB structure for the first time.
+  - The DB starts and Stops and Restars when setting up for first time
+* Run docker compose down and docker compose up again. This should fix the issue
+
 ## 8. Set up Database Migrations  
 * command to prepare migrations: (after data model modification)
   - sh: python manage.py makemigrations 
@@ -606,6 +613,34 @@ command: >
       - name: Test
         run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
 ```
+
+### 3 can test and then delete DB volume to reset before changing user_model to email instead of user_id
+* ZAG: Wait to change Custom user model first (## 9) as initial migrations will setup the std django user model
+sh: docker compose up
+check for wait for db command and migrations
+
+## 9 Custom user model (change user_id to email)
+* Create model (Base from AbstracBaseUser + PermissionMixin)
+* Create custom manager (Used for CLI integraiont)
+* Set AUTH_USER_MODEL in settings.py
+* Manually Delete DB volume if started with standard django user model
+* Create and run migrations
+
+### 1 Design
+Data Model
+- email (EmailField)
+- name (CharField)
+- is_active (BooleanField)
+- is_staff (BooleanField) > To determine is they can login to the Django admin
+
+Hashing password method?
+
+### 2 Code
+* add unittest > core/tests/test_models.py
+* normalize email_address
+* create custom user model + user manager > core/models.py
+
+
 
 
 ---

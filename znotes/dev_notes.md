@@ -620,8 +620,10 @@ sh: docker compose up
 check for wait for db command and migrations
 
 ## 9 Custom user model (change user_id to email)
+If you are implementing this in an existing project where migrations have already been run, switching the AUTH_USER_MODEL can cause database conflicts. **It is heavily recommended to set up a custom user model at the very beginning of a Django project.**
+
 * Create model (Base from AbstracBaseUser + PermissionMixin)
-* Create custom manager (Used for CLI integraiont)
+* Create custom user manager (Used for CLI integraiont)
 * Set AUTH_USER_MODEL in settings.py
 * Manually Delete DB volume if started with standard django user model
 * Create and run migrations
@@ -636,10 +638,18 @@ Data Model
 Hashing password method?
 
 ### 2 Code
-* add unittest > core/tests/test_models.py
-* normalize email_address
-* create custom user model + user manager > core/models.py
-
+* core/tests/test_models.py > add unittest
+* use normalize_email(email) to avoid duplicates
+* core/models.py > create custom user model + user manager
+- in class User:
+    objects = UserManager () binds User class with User Manager
+    USERNAME_FIELD = "email" > tells django to use this instead of username_id
+- in class UserManager override:
+    def create_user
+    def create_superuser
+* settings.py > 
+  - add at end: 
+    AUTH_USER_MODEL = 'your_app_name.User'
 
 
 

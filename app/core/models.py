@@ -45,6 +45,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)  # only staff logins to django admin
 
+    # Link the custom manager
+    objects = UserManager()
+
     # this is what replaces the django default username field from
     # username to email
     USERNAME_FIELD = "email"

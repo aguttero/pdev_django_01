@@ -762,6 +762,19 @@ admin.site.register(models.User, UserAdmin)
 4. Validate in unittest and localhost:8000/admin (/change page should fail until fieldset is defined) 
 - fieldset should only include fields that are in our data model
 
+## 16. API Setup
+### 1 Automated API documentation Setup
+1. install drf-spectacular > requirements.txt drf-spectacular >=0.30.0,<0.31
+- ZAG this installs djangorestframework 3.18.3 and others
+SIDECAR?
+2. re build container > docker compose build
+3. valdiate with pip list in py venv in docker container
+4. in settings.py add 
+  - installed apps: 'rest_framework', 'drf_spectacular'
+  - bottom of file > REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'}
+  - > SPECTACULAR_SETTINGS = {'COMPONENT_SPLIT_REQUEST': True,}
+5. enable URLs > app/dshbrd/urls.py (urlpatterns + imports)
+
 
 ---
 # run commands

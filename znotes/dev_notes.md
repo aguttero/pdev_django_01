@@ -582,7 +582,7 @@ psycopg[c]>=3.3.6,<3.4
   - add 'core' to installed apps in settings.py
   - create core/management/commands/wait_for_db.py (and __init__.py in all folders)
   - create test for wait_for_db in core/tests/test_commands.py
-  - test with: docker compose run --rm app sh -c"python manage.py test"
+  - test with: docker compose run --rm app sh -c "python manage.py test"
 2. Add wait_for_db to:
   - .github/workflows/checks.yml (see #8.2)
   - compose.yml > commands (see #8.1)
@@ -608,8 +608,8 @@ import time
 
 from django.core.management.base import BaseCommand
 from django.db import connections  # <--- Importación clave para probar la conexión real
-from django.db.utils import OperationalError
-from psycopg import OperationalError as PsycopgOpError
+from django.db.utils import OperationalError # django error DB not ready
+from psycopg import OperationalError as PsycopgOpError # python error renamed to avoid confusion with django error
 
 
 class Command(BaseCommand):
@@ -617,6 +617,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Entrypoint for command."""
+         # stdout -> prints to console
         self.stdout.write("Waiting for database...")
         db_up = False
 
@@ -637,6 +638,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Database available!"))
 ```
 ##### FIX TEST CODE
+**ZAG PENDING** Both tests fail:
+django.test.testcases.DatabaseOperationForbidden: Database threaded connections to 'default' are not allowed in SimpleTestCase subclasses. Either subclass TestCase or TransactionTestCase to ensure proper test isolation or add 'default' to core.tests.test_commands.CommandTests.databases to silence this failure.
 
 Qué cambió exactamente en el test?
 
@@ -649,7 +652,7 @@ Qué cambió exactamente en el test?
 3. El comportamiento de side_effect:
 	• Sigue funcionando exactamente igual de genial. Simula tus 2 caídas de puerto, tus 3 errores de inicialización de Postgres, y el éxito final al sexto intento, asegurando que tu lógica de reintentos sea a prueba de balas contra ese reinicio fantasma del contenedor.
 
-## 8. Set up Database Migrations  
+### 8. Set up Database Migrations  
 * command to prepare migrations: (after data model modification)
   - sh: python manage.py makemigrations 
 
@@ -657,7 +660,7 @@ Qué cambió exactamente en el test?
   - sh: python manage.py migrate
   - best practice: automate run migrate command after wait for db every time you start django
 
-### 1 Edit compose.yml > COMMAND
+#### 1 Edit compose.yml > COMMAND
 add wait for db and migrate commands
 ```.yml
 command: >
@@ -665,18 +668,18 @@ command: >
              python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
 ```
-### 2 Edit .github/workflows/checks.yml
+#### 2 Edit .github/workflows/checks.yml
 ```.yml
       - name: Test
         run: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py test"
 ```
 
-### 3 can test and then delete DB volume to reset before changing user_model to email instead of user_id
+#### 3 can test and then delete DB volume to reset before changing user_model to email instead of user_id
 * ZAG: Wait to change Custom user model first (## 9) as initial migrations will setup the std django user model
 sh: docker compose up
 check for wait for db command and migrations
 
-## 9 Custom user model (change user_id to email)
+## 14. Set up Custom user model (change user_id to email)
 If you are implementing this in an existing project where migrations have already been run, switching the AUTH_USER_MODEL can cause database conflicts. **It is heavily recommended to set up a custom user model at the very beginning of a Django project.**
 
 * Create model (Base from AbstracBaseUser + PermissionMixin)
@@ -726,6 +729,18 @@ To fix:
   > run again: docker compose run --rm app sh -c "python manage.py wait_for_db && python manage.py migrate" > if fails, is because of the temporary postgres server for the very first time, run again and it works.
 3. ZAG: Going back to (## 13.7)FIX DB RACE CONDITION to fix the code.
   - instead of waiting for a self.check = ok will wait for an ORM OK
+
+### 4 Create SuperUser
+1. open localhost:8000/admin
+2. create super user > sh: docker compose run --rm app sh -c "python manage.py createsuperuser" 
+3. (email -> admin@example.com / pass -> p underscore 123)
+4. If you forget user, need to clear DB or run createsuperuser
+5. Test login in localhost:8000/admin
+
+## 15. Setup Django admin
+1. customize the admin or add user page if needed
+2. tdd in core/tests/test_admin.py
+
 
 ---
 # run commands

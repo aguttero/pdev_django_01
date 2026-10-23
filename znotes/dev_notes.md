@@ -740,6 +740,27 @@ To fix:
 ## 15. Setup Django admin
 1. customize the admin or add user page if needed
 2. tdd in core/tests/test_admin.py
+3. Code core/admin.py
+```python
+#bare min code to test in 8000/admin
+"""
+Django admin customization.
+"""
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+
+from core import models
+
+class UserAdmin(BaseUserAdmin):
+    """Define the admin pages for users."""
+
+    ordering = ["id"]
+    list_display = ["email", "name"]
+
+admin.site.register(models.User, UserAdmin)
+```
+4. Validate in unittest and localhost:8000/admin (/change page should fail until fieldset is defined) 
+- fieldset should only include fields that are in our data model
 
 
 ---

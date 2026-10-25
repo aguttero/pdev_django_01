@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'core',
+    'rest_framework',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -147,6 +149,6 @@ REST_FRAMEWORK = {
 
 # To enable uploads thru browsable interface
 # and to work properly
-SPECTACULAR_SETTINGS = {
-    'COMPONENT_SPLIT_REQUEST': True,
-}
+# SPECTACULAR_SETTINGS = {
+#     'COMPONENT_SPLIT_REQUEST': True,
+# }

@@ -774,6 +774,35 @@ SIDECAR?
   - bottom of file > REST_FRAMEWORK = {'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'}
   - > SPECTACULAR_SETTINGS = {'COMPONENT_SPLIT_REQUEST': True,}
 5. enable URLs > app/dshbrd/urls.py (urlpatterns + imports)
+```python 
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+# for health check api
+from core import views as core_views
+# add to ulrpatterns list:
+path('api/health-check/', core_views.health_check, name='health-check'),
+path('api/schema/', SpectacularAPIView.as_view(), name='api-schema'),
+path('api/docs/', SpectacularSwaggerView.as_view(url_name='api-schema'),name='api-docs'),
+
+```
+
+6. create core/views.py:
+```python
+"""
+Core views for app.
+"""
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+
+@api_view(['GET'])
+def health_check(request):
+    """Returns successful response."""
+    return Response({'healthy': True})
+```
+
+7. TEST 
+  - localhost:8000/api/docs
+  - localhost:8000/api/health-check/
 
 #### ZAG Pending: Swagger UI non-reliant on externa CDN config
 

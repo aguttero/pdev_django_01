@@ -86,3 +86,115 @@ Using the sidecar approach offers major architectural advantages:
 • The CDN Problem: If an external CDN goes down, encounters a routing issue, or changes its asset delivery pathways, your API documentation breaks instantly without any changes to your code.
 • The Sidecar Practice: Your documentation layout and rendering code are version-locked inside your codebase. The code only updates when you explicitly run a command like pip install --upgrade.
 Would you like help setting up your Django environment variables to toggle between development asset hosting and production production pipelines (like AWS S3 or Whitenoise)?
+
+# Non reliant on CDNs architecture
+To serve the Swagger UI completely offline without relying on external CDNs in Django 6, Django REST Framework (DRF), and drf-spectacular, you need to download the Swagger UI assets (JS/CSS) locally and configure Django's static files system to serve them.
+When running inside Docker, you must also ensure your Dockerfile or entrypoint script collects these static files so they are available to your web server (like Nginx) or local container environment.
+Here is the complete step-by-step configuration:
+
+## 1. Download the Swagger UI Assets Locally
+
+Instead of pointing to unpkg or cdnjs, you will download the assets and put them into your Django project's static directory.
+Create a folder structure inside one of your apps or your root static directory:
+```bash
+your_project/
+├── static/
+│   └── swagger-ui/
+│       ├── swagger-ui-bundle.js
+│       ├── swagger-ui-standalone-preset.js
+│       └── swagger-ui.css
+Usa el código con precaución.
+You can download these files directly from the official Swagger UI GitHub Repository dist folder or via a package manager.
+```
+
+## 2. Configure settings.py
+
+You need to tell drf-spectacular to look at your local static paths instead of the default remote URLs.
+```python
+# settings.py
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# 1. Standard Django Static Files Configuration
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Ensure Django looks into your custom static directory
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+# 2. DRF Spectacular Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Your API Documentation',
+    'DESCRIPTION': 'API description',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    
+    # --- OFFLINE/LOCAL SWAGGER UI CONFIGURATION ---
+    # Points to your locally hosted bundle, preset, and stylesheet
+    'SWAGGER_UI_DIST': '/static/swagger-ui', 
+    'SWAGGER_UI_FAVICON_HREF': '/static/swagger-ui/favicon-32x32.png', # Optional
+}
+```
+
+## 3. Update Docker Configuration
+
+Because containers have isolated environments, you must run collectstatic during the build or container startup phase so Django aggregates the local Swagger UI files into your STATIC_ROOT.
+
+### Option A: Run in Dockerfile (Recommended for Production)
+
+If your static files are served by a reverse proxy like Nginx, compile them during the image build:
+
+```ts
+# Dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+# Install dependencies including django, djangorestframework, drf-spectacular
+# Note: Django 6 requires Python 3.10+
+# For Django 6 compatibility, ensure you use the latest drf-spectacular release
+RUN pip install --no-cache-dir -r requirements.txt 
+
+COPY . .
+
+# Run collectstatic to move Swagger UI assets to your STATIC_ROOT
+RUN python manage.py collectstatic --noinput
+
+CMD ["gunicorn", "myproject.wsgi:application", "--bind", "0.0.0.0:8000"]
+```
+
+### Option B: Run via docker-compose Entrypoint (Recommended for Local Dev)
+
+If you are developing locally and mapping a volume, run collectstatic when the container boots up:
+
+```yaml
+# docker-compose.yml
+services:
+  web:
+    build: .
+    command: >
+      sh -c "python manage.py collectstatic --noinput &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+
+volumes:
+  static_volume:
+```
+
+## 4. Verify local asset loading
+
+1. Fire up your Docker containers (docker compose up --build).
+2. Navigate to your Swagger UI endpoint (e.g., http://localhost:8000/api/schema/swagger-ui/).
+3. Open your browser's Developer Tools (F12) and go to the Network tab.
+4. Refresh the page. You should see that swagger-ui-bundle.js and swagger-ui.css are loading directly from your local domain (/static/swagger-ui/...) with a 200 OK status, rather than initiating external network requests to external CDNs.
+Are you setting this up for a local development environment using Django's built-in runserver, or do you need a production-ready setup with Nginx serving those static files out of a shared Docker volume?

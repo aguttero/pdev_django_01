@@ -2,7 +2,6 @@
 Django admin customization.
 """
 
-
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
@@ -18,9 +17,9 @@ from core import models
 class UserAdmin(BaseUserAdmin):
     """Define the admin pages for users."""
 
-    ordering = ["id"]
-    list_filter = ("email", "name")
-    list_display = ["email", "name", "is_staff", "is_active", "is_superuser"]
+    ordering = ("id",)
+    list_filter = ("email", "name",)
+    list_display = ("email", "name", "is_staff", "is_active", "is_superuser",)
     fieldsets = (
         (
             None,
@@ -44,22 +43,25 @@ class UserAdmin(BaseUserAdmin):
         ),
         (_("Important dates"), {"fields": ("last_login",)}),
     )
-    readonly_fields = ["last_login"]
+    readonly_fields = ("last_login",)
     # classes: ('wide', ) is a CSS from djgango (find in documentation)
     # this is to enable the /add page > add_fieldsets
     add_fieldsets = (
-        (None, {
-            'classes': ('wide',),
-            'fields': (
-                'email',
-                'password1',
-                'password2',
-                'name',
-                'is_active',
-                'is_staff',
-                'is_superuser',
-            ),
-        }),
+        (
+            None,
+            {
+                "classes": ("wide",),
+                "fields": (
+                    "email",
+                    "password1",
+                    "password2",
+                    "name",
+                    "is_active",
+                    "is_staff",
+                    "is_superuser",
+                ),
+            },
+        ),
     )
 
 
